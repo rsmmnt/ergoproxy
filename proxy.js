@@ -7,19 +7,17 @@ var bigiparser = require('json-bigint');
 var BigNumber = require('bignumber.js');
 var blockdata = "";
 var parsed;
-var shareDiff = new BigNumber("100000000000000000000000000000000000000000000000000");
 var shareCount  = 0;
-/*
-app.use( bodyParser.json() );       // to support JSON-encoded bodies
-app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
-  extended: true
-})); 
-*/
-//var nodeaddr = "http://88.198.13.202:9052/mining/candidate";
-//var nodeaddr_post = "http://88.198.13.202:9052/mining/solution";
+//OPTIONS:
+// poolB = poolMult*realB
+var poolMult = 200;
+//node address
+var addr = "http://88.198.13.202:9052";
+//serverport
+var serverport = 36217;
 
-var nodeaddr = "http://88.198.13.202:9052/mining/candidate";
-var nodeaddr_post = "http://88.198.13.202:9052/mining/solution";
+var nodeaddr = addr + "/mining/candidate";
+var nodeaddr_post = addr + "/mining/solution";
 //require('request').debug = true
 var syncer = function()
 {
@@ -44,16 +42,14 @@ app.get('/mining/candidate', function(req,res)
 {
     res.contentType("application/json");
     var tmpparsed = bigiparser.parse(bigiparser.stringify(parsed));
-    console.log(tmpparsed);
-    tmpparsed.b = tmpparsed.b.multipliedBy(5).toString(10);
-    console.log(tmpparsed.b);
+    tmpparsed.b = tmpparsed.b.multipliedBy(poolMult).toString(10);
     res.send(tmpparsed);
 });
 
 app.post('/mining/solution', function(req,res)
 {
     
-    shareDiff = parsed.b.multipliedBy(5);
+    shareDiff = parsed.b.multipliedBy(poolMult);
     var bodyStr = '';
     var postResponse;
     req.on("data",function(chunk){
@@ -65,7 +61,7 @@ app.post('/mining/solution', function(req,res)
     
     var postparsed = bigiparser.parse(bodyStr);
     postparsed.d = new BigNumber(postparsed.d);
-    console.log(postparsed);
+    //console.log(postparsed);
     var resp;
     if(postparsed.d.isLessThan(shareDiff))
     {
@@ -80,16 +76,14 @@ app.post('/mining/solution', function(req,res)
     if(parsed.b.isLessThan(postparsed.d))
     {
         res.send(resp + " D is not less than bound");
-	//res.send("D is not less than bound, not a solution");
         res.end();
     }
-	    else{
+    else{
     //   console.log(req)
     require('request').debug = true
     request({
         url: nodeaddr_post,
         method: "POST",
-       // json: true,   // <--Very important!!!
         body: bodyStr,
         headers: {
             'Content-Type': 'application/json',
@@ -106,13 +100,13 @@ app.post('/mining/solution', function(req,res)
 		
     require('request').debug = false;		
     
-	    }});
+   }});
     
 	
 });
 
 setInterval(syncer,1000);
 
-http.listen(36217, "0.0.0.0", function () {
-    console.log('[DEBUG] Listening on ')
+http.listen( serverport, "0.0.0.0", function () {
+    console.log(' Listening on ' + serverport)
   })
